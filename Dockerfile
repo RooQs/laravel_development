@@ -8,5 +8,3 @@ RUN docker-php-serversideup-dep-install-alpine git
 
 # 设置工作目录
 WORKDIR /var/www/html
-
-USER www-data
