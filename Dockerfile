@@ -4,7 +4,8 @@ USER root
 
 RUN install-php-extensions imap http gd sockets bcmath 
 RUN composer config -g repos.packagist composer https://mirrors.tencent.com/composer/
-RUN apk add --no-cache git
+RUN docker-php-serversideup-dep-install-alpine git \
+    && git config --global --add safe.directory /var/www/html
 
 # 设置工作目录
 WORKDIR /var/www/html
