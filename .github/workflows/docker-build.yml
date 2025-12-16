@@ -1,0 +1,66 @@
+name: Docker Build and Push
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  create:
+    tags: [ '*' ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+    
+    - name: Login to Docker Hub
+      if: github.event_name != 'pull_request'
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKER_HUB_USERNAME }}
+        password: ${{ secrets.DOCKER_HUB_TOKEN }}
+    
+    - name: Extract tag name
+      id: extract_tag
+      if: github.event_name == 'create' && github.event.ref_type == 'tag'
+      run: |
+        echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+    
+    - name: Build and push (latest for main)
+      if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        push: true
+        tags: rooqs/laravel-development:latest
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        platforms: linux/amd64,linux/arm64
+    
+    - name: Build and push (tag for releases)
+      if: github.event_name == 'create' && github.event.ref_type == 'tag'
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        push: true
+        tags: rooqs/laravel-development:${{ steps.extract_tag.outputs.tag }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        platforms: linux/amd64,linux/arm64
+    
+    - name: Build only (pull requests)
+      if: github.event_name == 'pull_request'
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        push: false
+        tags: rooqs/laravel-development:pr-${{ github.event.pull_request.number }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        platforms: linux/amd64,linux/arm64
